@@ -1,4 +1,5 @@
 #include "../h/Token.h"
+#include "../src/tokenDetermine.cpp"
 
 #include <fstream>
 #include <string>
@@ -13,57 +14,6 @@ void sendToken(std::string type, std::string text) {
     tokens.push_back(token);
 }
 
-// Checks if the string from the index to the next blank is a number
-// Returns 0 if it is not a number
-int isNum(std::string str, int startingIndex) {
-
-    for (int i = startingIndex; i < str.length(); i++) {
-        if (isalpha(str[i])) {
-            return 0;
-        }
-
-        if (!isdigit(str[i])) {
-            return i - startingIndex;
-        }
-    }
-    
-    return str.length() - startingIndex;
-}
-
-int isOpp(std::string str, int startingIndex) {
-    char testChar = str[startingIndex];
-    char nextChar = 0x00;
-
-    // Sets the next char to a value if the current char isn't the last
-    if (str.length() > startingIndex + 1) {
-        nextChar = str[startingIndex + 1];
-    }
-
-    const char oppChars[] = {'+', '-', '=', '<', '>', '/', '*', '&', '|'};
-    const int COMBO_AMOUNT = 6;
-    const char combos[COMBO_AMOUNT][2] = {{'>', '='}, {'<', '='}, {'+', '='}, {'-', '='}, {'*', '='}, {'/', '='}};
-
-    // Checks if the char is an opp char
-    for (char c : oppChars) {
-        if (testChar == c) {
-            // Checks if the char is part of a combo
-            for (int i = 0; i < COMBO_AMOUNT; i++) {
-                if (testChar == combos[i][0] && nextChar == combos[i][1]) {
-                    return 2;
-                }
-            }
-
-            // Says the opp is 1 char long if not a combo
-            return 1;
-        }
-    }
-
-    return 0;
-}
-
-
-
-
 
 void lexLine(string line) {
 
@@ -77,6 +27,7 @@ void lexLine(string line) {
         // Checks if the line is a function terminator
         if (c == '!') {
             sendToken("FUNE", "");
+            //sendToken("ENDL", "");
             return;
         }
     }
@@ -87,55 +38,68 @@ void lexLine(string line) {
     }
 
 
-    std::string tempString;
-
-    std::string tokenType = "ID  ";
-
+    // Goes through each char in the line
+    // May skip over chars if they are part of a multi-char token
     for (int i = 0; i < line.length(); i++) {
-
-        tempString += line[i];
+        int synLen, numLen, oppLen, idLen;
 
         // Checks if the char is blank
         if (line[i] == ' ') {
-            // Removes the blank char off the token
-            tempString.pop_back();
 
-            // Makes sure the token isn't blank before sending
-            if (tempString.length() > 0) {
-                sendToken(tokenType, tempString);
-            }
-            tempString = "";
-            tokenType = "ID  ";
         }
 
-        // Checks if the next token is a number if at start of token
-        if (tempString.length() == 1) {
-            if (isNum(line, i) != 0) {
-                tokenType = "NUM ";
-            }
+        // Syntax is a single char and activates any time a syntax char shows up
+        else if ((synLen = isSyn(line, i)) != 0) {
+
+            std::string tempSynStr = "";
+            tempSynStr += line[i];
+            sendToken("SYN ", tempSynStr);
         }
 
-        
-        // Checks if the next token is an operation
-        int oppNum = isOpp(line, i);
-        if (oppNum != 0) {
+        // IDs can contain letters, _s, -s, and numbers
+        // Must contain at least one non number char
+        else if ((idLen = isID(line, i)) != 0)  {
+            std::string tempIDStr = "";
+
+            int tempI = i;
+            // Because there was already an incriment for the first char
+            i -= 1;
+
+            for (int j = 0; j < idLen; j++) {
+                tempIDStr += line[tempI + j];
+                i += 1;
+            }
+
+            // Sends the ID token
+            sendToken("ID  ", tempIDStr);
+        }
+
+        // Numbers contain only digits and can not be touching an ID specified char
+        else if ((numLen = isNum(line, i)) != 0) {
+
+            std::string tempNumStr = "";
+
+            int tempI = i;
+            // Because there was already an incriment for the first char
+            i -= 1;
+
+            for (int j = 0; j < numLen; j++) {
+                tempNumStr += line[tempI + j];
+                i += 1;
+            }
+
+            // Sends the opp token
+            sendToken("NUM ", tempNumStr);
+        }
+
+        // Opperations are 1 or 2 chars and activate any time they appear
+        else if ((oppLen = isOpp(line, i)) != 0) {
+
             std::string tempOppStr = "";
             tempOppStr += line[i];
 
-            // Removes the opp char off the token
-            tempString.pop_back();
-
-            // Makes sure the token isn't blank before sending
-            if (tempString.length() > 0) {
-                sendToken(tokenType, tempString);
-            }
-            
-            tempString = "";
-            tokenType = "ID  ";
-
-
             // Extra steps if the opp is a char combo
-            if (oppNum == 2) {
+            if (oppLen == 2) {
                 tempOppStr += line[i + 1];
 
                 i += 1;
@@ -143,13 +107,15 @@ void lexLine(string line) {
 
             // Sends the opp token
             sendToken("OPP ", tempOppStr);
+        } 
+        
+        // Sends a unkown token when no other token types are found
+        else {
+            sendToken("UNK ", std::string(1, line[i]));
         }
     }
 
-    // Sends the remaining token
-    if (tempString.length() > 0) {
-        sendToken(tokenType, tempString);
-    }
+    // ---------------End of For Loop-------------------- //
 
     // Line is over
     sendToken("ENDL", "");
