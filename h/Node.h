@@ -5,17 +5,19 @@
 using std::unique_ptr;
 using std::string;
 
+class Node;
 typedef unique_ptr<Node> NodePtr;
 
 class Node {
     public:
-        Node() {};
+        //virtual ~Node() = default;
 
         string getName() {
             return name;
         }
 
     protected:
+        Node() {}
         string name;
 
 };
@@ -30,7 +32,9 @@ class OppNode: public Node {
             node->rightNode = move(p_rightNode);
         }
 
-        OppNode() {};
+        OppNode() {
+
+        };
 
         void setLeft(Node* newNode) {
 
