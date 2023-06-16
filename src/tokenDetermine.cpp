@@ -113,7 +113,7 @@ static int isOpp(std::string str, int startingIndex) {
 
 static int isSyn(std::string str, int startingIndex) {
 
-    const char synChars[] = {'(', ')', '{', '}', '[', ']', '\"', '\'', ',', '.'};
+    const char synChars[] = {'(', ')', '{', '}', '[', ']', '\"', '\'', ',', '.', ':'};
 
     // Checks if the char is a syntax char
     for (char c : synChars) {

@@ -123,7 +123,7 @@ void lexLine(string line) {
 
 
 
-void lexFile(string fileName) {
+std::vector<Token> lexFile(string fileName) {
     std::fstream file;
     file.open(fileName, std::ios::in);
 
@@ -135,9 +135,13 @@ void lexFile(string fileName) {
         lexLine(line);
     }
 
+
+    std::cout << "TOKENS: \n\n";
     // Prints out the token info
     for (Token token : tokens) {
         std::cout << "[" << token.getType() << ": " << token.getText() << "]\n";
     }
+    std::cout << "\n";
 
+    return tokens;
 }
